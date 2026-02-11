@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบประเมินความพร้อมในการเก็บเกี่ยวกะหล่ำปลี</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #2d3748; background: linear-gradient(135deg, #f0f9f0 0%, #e8f5e8 100%); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        
+        /* Announcement Bar Style */
+        #announcement-bar {
+            background: #fffbeb; 
+            color: #92400e; 
+            padding: 10px 20px; /* เพิ่ม padding ด้านข้าง */
+            text-align: center; 
+            border-bottom: 1px solid #fcd34d; 
+            position: fixed; 
+            top: 0; 
+            width: 100%; 
+            z-index: 2000; 
+            font-weight: 500;
+            line-height: 1.5;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        /* Header Style */
+        #main-header { 
+            background: rgba(255, 255, 255, 0.95); 
+            backdrop-filter: blur(10px); 
+            position: fixed; 
+            top: 0; /* ค่าเริ่มต้น 0 เดี๋ยว JS จะมาแก้ถ้ามีประกาศ */
+            width: 100%; 
+            z-index: 1000; 
+            box-shadow: 0 2px 20px rgba(16, 185, 129, 0.1); 
+            border-bottom: 1px solid rgba(16, 185, 129, 0.1); 
+            transition: top 0.3s ease; /* เอฟเฟกต์เลื่อนนุ่มๆ */
+        }
+        
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; height: 80px; } /* กำหนดความสูง nav ให้ชัดเจน */
+        .logo { display: flex; align-items: center; font-size: 1.5rem; font-weight: bold; color: #065f46; }
+        .logo i { font-size: 2rem; margin-right: 0.5rem; color: #10b981; }
+        .nav-links { display: flex; list-style: none; gap: 2rem; }
+        .nav-links a { text-decoration: none; color: #374151; font-weight: 500; transition: all 0.3s ease; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;}
+        .nav-links a:hover, .nav-links a.active { color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        
+        /* Main Content Style */
+        #main-content { 
+            margin-top: 80px; /* ค่าเริ่มต้น */
+            min-height: calc(100vh - 80px); 
+            transition: margin-top 0.3s ease; 
+        }
+        
+        .page { display: none; padding: 4rem 0; animation: fadeIn 0.5s ease-in; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* ... (CSS ส่วนอื่นๆ เหมือนเดิม) ... */
+        .hero { text-align: center; padding: 6rem 0; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(5, 150, 105, 0.05) 100%); border-radius: 24px; margin: 2rem 0; }
+        .hero h1 { font-size: 3.5rem; font-weight: 700; color: #065f46; margin-bottom: 1.5rem; line-height: 1.2; }
+        .hero p { font-size: 1.25rem; color: #6b7280; margin-bottom: 3rem; max-width: 600px; margin-left: auto; margin-right: auto; }
+        
+        .cta-button { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 1rem 2.5rem; font-size: 1.1rem; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; transition: all 0.3s ease; text-decoration: none; display: inline-block; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3); }
+        .cta-button:hover { transform: translateY(-2px); box-shadow: 0 15px 40px rgba(16, 185, 129, 0.4); }
+        
+        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin: 4rem 0; }
+        .feature-card { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); transition: all 0.3s ease; border: 1px solid rgba(16, 185, 129, 0.1); }
+        .feature-card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15); }
+        .feature-icon { font-size: 3rem; color: #10b981; margin-bottom: 1.5rem; }
+        .feature-card h3 { font-size: 1.5rem; font-weight: 600; color: #065f46; margin-bottom: 1rem; }
+        
+        .upload-area { background: white; border: 3px dashed #10b981; border-radius: 16px; padding: 4rem; text-align: center; margin: 2rem 0; transition: all 0.3s ease; cursor: pointer; }
+        .upload-area:hover { border-color: #059669; background: rgba(16, 185, 129, 0.05); }
+        .upload-icon { font-size: 4rem; color: #10b981; margin-bottom: 1.5rem; }
+        .file-input { display: none; }
+        .upload-button { background: #10b981; color: white; padding: 1rem 2rem; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1rem; }
+        
+        .progress-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; margin: 2rem 0; overflow: hidden; display: none; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #10b981, #059669); width: 0%; transition: width 0.3s ease; }
+        
+        .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; margin: 2rem 0; }
+        .result-card { background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); transition: all 0.3s ease; }
+        .result-card:hover { transform: translateY(-2px); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15); }
+        
+        .status-badge { padding: 0.5rem 1rem; border-radius: 20px; font-weight: 600; font-size: 0.9rem; display: inline-block; margin-bottom: 1rem; }
+        .status-not-ready { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
+        .status-ready { background: rgba(16, 185, 129, 0.1); color: #059669; }
+        .status-overdue { background: rgba(245, 158, 11, 0.1); color: #d97706; }
+        
+        .percentage { font-size: 3rem; font-weight: 700; margin: 1rem 0; }
+        .percentage.not-ready { color: #dc2626; }
+        .percentage.ready { color: #059669; }
+        .percentage.overdue { color: #d97706; }
+        
+        .image-preview { width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 1rem; }
+        
+        @media (max-width: 768px) { .nav-links { display: none; } .hero h1 { font-size: 2.5rem; } .hero p { font-size: 1rem; } .features { grid-template-columns: 1fr; } .results-grid { grid-template-columns: 1fr; } }
+        
+        .loading { display: none; text-align: center; padding: 2rem; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top: 4px solid #10b981; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .section-title { font-size: 2.5rem; font-weight: 700; color: #065f46; text-align: center; margin-bottom: 3rem; }
+        .card { background: white; border-radius: 16px; padding: 2.5rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); margin: 2rem 0; }
+    </style>
+</head>
+<body>
+    {% if announcement %}
+    <div id="announcement-bar">
+        <div style="max-width: 1200px; margin: 0 auto; position: relative; padding-right: 40px;">
+            <i class="fas fa-bullhorn" style="margin-right: 8px;"></i>
+            {{ announcement }}
+            <button onclick="closeAnnouncement()" style="position: absolute; right: 0; top: 0; border: none; background: none; cursor: pointer; color: #92400e; font-size: 1.1rem;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    <header id="main-header">
+        <nav class="container">
+            <div class="logo">
+                <i class="fas fa-seedling"></i>
+                CabbageAI
+            </div>
+            <ul class="nav-links">
+                <li><a href="#" class="nav-link active" data-page="home">หน้าหลัก</a></li>
+                <li><a href="#" class="nav-link" data-page="assessment">ประเมินความพร้อม</a></li>
+                <li><a href="#" class="nav-link" data-page="results">ผลการประเมิน</a></li>
+                <li><a href="#" class="nav-link" data-page="history">ประวัติการประเมิน</a></li>
+                <li><a href="#" class="nav-link" onclick="document.getElementById('manualModal').style.display='block'">คู่มือการใช้งาน</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main id="main-content">
+        <div class="page active" id="home">
+            <div class="container">
+                <div class="hero">
+                    <h1>ระบบประเมินความพร้อม<br>การเก็บเกี่ยวกะหล่ำปลี</h1>
+                    <p>ใช้เทคโนโลยี AI และภาพถ่ายจากโดรนเพื่อประเมินความพร้อมของกะหล่ำปลีในการเก็บเกี่ยวอย่างแม่นยำและรวดเร็ว</p>
+                    <a href="#" class="cta-button" onclick="showPage('assessment')">
+                        <i class="fas fa-camera"></i> เริ่มประเมินเลย
+                    </a>
+                </div>
+
+                <div class="features">
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-robot"></i></div>
+                        <h3>AI ที่ทันสมัย</h3>
+                        <p>ใช้เทคโนโลยี Machine Learning ขั้นสูงในการวิเคราะห์ภาพและประเมินความพร้อมของกะหล่ำปลีอย่างแม่นยำ</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-chart-pie"></i></div>
+                        <h3>3 ระยะการประเมิน</h3>
+                        <p>วิเคราะห์ความพร้อม 3 ระยะ: ยังไม่พร้อม, พร้อมเก็บเกี่ยว, และเกินเวลา พร้อมแสดงผลเป็นเปอร์เซ็นต์</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-drone"></i></div>
+                        <h3>ภาพจากโดรน</h3>
+                        <p>รองรับการวิเคราะห์ภาพมุมสูงจากโดรน ให้มุมมองที่ครอบคลุมและแม่นยำในการประเมิน</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="assessment">
+            <div class="container">
+                <h2 class="section-title">ประเมินความพร้อมกะหล่ำปลี</h2>
+                <div class="card">
+                    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                        <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                        <h3>อัปโหลดภาพจากโดรน</h3>
+                        <p>ลากและวางไฟล์ภาพที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
+                        <p style="color: #6b7280; font-size: 0.9rem; margin-top: 1rem;">รองรับไฟล์ JPG, PNG ขนาดสูงสุด 10MB</p>
+                        <input type="file" id="fileInput" class="file-input" accept="image/*" onchange="handleFileUpload(this)">
+                        <button class="upload-button">เลือกไฟล์</button>
+                    </div>
+                    <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+                    <div class="loading" id="loading">
+                        <div class="spinner"></div>
+                        <p>กำลังวิเคราะห์ภาพด้วย AI...</p>
+                    </div>
+                    <div id="uploadedImage" style="text-align: center; margin: 2rem 0; display: none;">
+                        <img id="imagePreview" style="max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+                        <div style="margin-top: 1rem;">
+                            <button class="cta-button" onclick="startAnalysis()">
+                                <i class="fas fa-brain"></i> เริ่มวิเคราะห์
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="results">
+            <div class="container">
+                <h2 class="section-title">ผลการประเมิน</h2>
+                <div class="card" style="text-align: center;">
+                    <img id="resultImage" style="max-width: 100%; max-height: 300px; border-radius: 12px; margin-bottom: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+                    <div id="singleResult"></div>
+                </div>
+                <div style="text-align: center; margin-top: 3rem;">
+                    <button class="cta-button" onclick="showPage('assessment')" style="margin-right: 1rem;">
+                        <i class="fas fa-plus"></i> ประเมินภาพใหม่
+                    </button>
+                    <button class="cta-button" onclick="showPage('history')" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
+                        <i class="fas fa-history"></i> ดูประวัติ
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="history">
+            <div class="container">
+                <h2 class="section-title">ประวัติการประเมิน</h2>
+                <div class="results-grid" id="historyGrid"></div>
+                <div style="text-align: center; margin-top: 3rem;">
+                    <button class="cta-button" onclick="showPage('assessment')">
+                        <i class="fas fa-plus"></i> ประเมินภาพใหม่
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="manualModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000;">
+        <div style="background: white; width: 90%; max-width: 600px; margin: 10% auto; padding: 2rem; border-radius: 12px; position: relative; max-height: 80vh; overflow-y: auto;">
+            <h2 style="color: #065f46; margin-bottom: 1rem; border-bottom: 2px solid #ecfdf5; padding-bottom: 0.5rem;">
+                <i class="fas fa-book"></i> คู่มือและเงื่อนไขการใช้งาน
+            </h2>
+            <div style="line-height: 1.8; color: #374151; white-space: pre-wrap;">{{ manual or "ยังไม่มีข้อมูลคู่มือการใช้งาน" }}</div>
+            <button onclick="document.getElementById('manualModal').style.display='none'" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280;">
+                <i class="fas fa-times"></i>
+            </button>
+            <div style="text-align: center; margin-top: 2rem;">
+                <button onclick="document.getElementById('manualModal').style.display='none'" class="cta-button">รับทราบ</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ฟังก์ชันปรับตำแหน่ง Header ตามความสูงของประกาศ
+        function adjustLayout() {
+            const announcementBar = document.getElementById('announcement-bar');
+            const mainHeader = document.getElementById('main-header');
+            const mainContent = document.getElementById('main-content');
+            
+            if (announcementBar && window.getComputedStyle(announcementBar).display !== 'none') {
+                const height = announcementBar.offsetHeight;
+                
+                // ดันเมนูลงมาเท่ากับความสูงประกาศ
+                mainHeader.style.top = height + 'px';
+                
+                // ดันเนื้อหาลงมา (80px คือความสูงเมนู + ความสูงประกาศ)
+                mainContent.style.marginTop = (80 + height) + 'px';
+            } else {
+                // ถ้าไม่มีประกาศ หรือปิดไปแล้ว
+                mainHeader.style.top = '0px';
+                mainContent.style.marginTop = '80px';
+            }
+        }
+
+        // ฟังก์ชันปิดประกาศ
+        function closeAnnouncement() {
+            const bar = document.getElementById('announcement-bar');
+            if (bar) {
+                bar.style.display = 'none';
+                adjustLayout(); // เรียกฟังก์ชันจัดหน้าใหม่ทันที
+            }
+        }
+
+        // ทำงานเมื่อโหลดหน้าเว็บเสร็จ
+        document.addEventListener('DOMContentLoaded', adjustLayout);
+        // ทำงานเมื่อมีการย่อ-ขยายหน้าจอ (Responsive)
+        window.addEventListener('resize', adjustLayout);
+        
+        // ... (Script เดิมอื่นๆ ด้านล่างนี้) ...
+        let currentResults = [];
+        let assessmentHistory = JSON.parse(localStorage.getItem('cabbageHistory')) || [];
+        let currentImageSrc = null;
+
+        function showPage(pageId) {
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            
+            const navLinks = document.querySelectorAll('.nav-link[data-page]');
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.dataset.page === pageId) {
+                    link.classList.add('active');
+                }
+            });
+
+            if (pageId === 'history') {
+                displayHistory();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // เรียก adjustLayout อีกครั้งเผื่อโหลดเสร็จไม่พร้อมกัน
+            adjustLayout();
+            
+            assessmentHistory = JSON.parse(localStorage.getItem('cabbageHistory')) || [];
+            const navLinks = document.querySelectorAll('.nav-link[data-page]');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    showPage(this.dataset.page);
+                });
+            });
+        });
+
+        function handleFileUpload(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentImageSrc = e.target.result;
+                    const imagePreview = document.getElementById('imagePreview');
+                    const uploadedImageDiv = document.getElementById('uploadedImage');
+                    imagePreview.src = currentImageSrc;
+                    uploadedImageDiv.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function startAnalysis() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert("กรุณาเลือกไฟล์ก่อนครับ");
+                return;
+            }
+
+            const loading = document.getElementById('loading');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            
+            loading.style.display = 'block';
+            progressBar.style.display = 'block';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                if(progress < 90) progress += 5;
+                progressFill.style.width = progress + '%';
+            }, 200);
+
+            fetch('/analyze', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                clearInterval(interval);
+                progressFill.style.width = '100%';
+                
+                setTimeout(() => {
+                    const result = {
+                        status: data.status,
+                        label: data.label,
+                        description: data.description,
+                        icon: data.icon,
+                        weeks: data.weeks,
+                        image: data.image_url,
+                        timestamp: new Date().toLocaleString('th-TH')
+                    };
+
+                    currentResults = [result];
+                    assessmentHistory.unshift(result);
+                    if (assessmentHistory.length > 50) assessmentHistory = assessmentHistory.slice(0, 50);
+                    localStorage.setItem('cabbageHistory', JSON.stringify(assessmentHistory));
+                    
+                    displaySingleResult(result);
+                    showPage('results');
+                    
+                    loading.style.display = 'none';
+                    progressBar.style.display = 'none';
+                    progressFill.style.width = '0%';
+                    document.getElementById('uploadedImage').style.display = 'none';
+                }, 500);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+                loading.style.display = 'none';
+                clearInterval(interval);
+            });
+        }
+
+        function displaySingleResult(result) {
+            const resultImage = document.getElementById('resultImage');
+            const singleResult = document.getElementById('singleResult');
+            
+            if (result.image) {
+                resultImage.src = result.image;
+                resultImage.style.display = 'block';
+            }
+
+            singleResult.innerHTML = `
+                <div class="status-badge status-${result.status}" style="font-size: 1.1rem; padding: 0.75rem 1.5rem;">
+                    <i class="${result.icon}"></i> ${result.label}
+                </div>
+                <div class="percentage ${result.status}" style="font-size: 4rem; margin: 1.5rem 0;">
+                    ${result.weeks} สัปดาห์
+                </div>
+                <h3 style="color: #065f46; margin-bottom: 1.5rem; font-size: 1.5rem;">อายุของกะหล่ำปลี</h3>
+                <p style="color: #6b7280; line-height: 1.8; font-size: 1.1rem; max-width: 500px; margin: 0 auto;">${result.description}</p>
+                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e5e7eb; color: #9ca3af;">
+                    <i class="fas fa-clock"></i> วิเคราะห์เมื่อ: ${result.timestamp}
+                </div>
+            `;
+        }
+
+        function displayHistory() {
+            const historyGrid = document.getElementById('historyGrid');
+            if (assessmentHistory.length === 0) {
+                historyGrid.innerHTML = `
+                    <div style="text-align: center; padding: 4rem; grid-column: 1 / -1;">
+                        <i class="fas fa-history" style="font-size: 4rem; color: #d1d5db; margin-bottom: 1rem;"></i>
+                        <h3 style="color: #9ca3af; margin-bottom: 1rem;">ยังไม่มีประวัติการประเมิน</h3>
+                        <p style="color: #9ca3af;">เริ่มประเมินกะหล่ำปลีเพื่อดูประวัติที่นี่</p>
+                    </div>`;
+                return;
+            }
+            historyGrid.innerHTML = '';
+            assessmentHistory.forEach((result, index) => {
+                const historyCard = document.createElement('div');
+                historyCard.className = 'result-card';
+                historyCard.style.cursor = 'pointer';
+                historyCard.onclick = () => {
+                    currentResults = [result];
+                    displaySingleResult(result);
+                    showPage('results');
+                };
+                historyCard.innerHTML = `
+                    ${result.image ? `<img src="${result.image}" class="image-preview">` : ''}
+                    <div class="status-badge status-${result.status}">${result.label}</div>
+                    <div class="percentage ${result.status}" style="font-size: 2.5rem;">${result.weeks} สัปดาห์</div>
+                    <h3 style="color: #065f46; margin-bottom: 1rem;">ครั้งที่ ${assessmentHistory.length - index}</h3>
+                    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; font-size: 0.8rem; color: #9ca3af;">
+                        <i class="fas fa-clock"></i> ${result.timestamp}
+                    </div>
+                `;
+                historyGrid.appendChild(historyCard);
+            });
+        }
+
+        // Drag and Drop
+        const uploadArea = document.querySelector('.upload-area');
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, e => {e.preventDefault(); e.stopPropagation();}, false);
+        });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, () => {
+                uploadArea.style.borderColor = '#059669';
+                uploadArea.style.background = 'rgba(16, 185, 129, 0.1)';
+            }, false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, () => {
+                uploadArea.style.borderColor = '#10b981';
+                uploadArea.style.background = 'white';
+            }, false);
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                document.getElementById('fileInput').files = files;
+                handleFileUpload(document.getElementById('fileInput'));
+            }
+        }, false);
+    </script>
+</body>
+</html>
