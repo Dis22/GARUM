@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เข้าสู่ระบบแอดมิน</title>
+    <title>เข้าสู่ระบบ</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f9f0; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
@@ -15,13 +15,14 @@
         .btn-login { width: 100%; background: #10b981; color: white; padding: 0.75rem; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.3s; }
         .btn-login:hover { background: #059669; }
         .error-msg { color: #dc2626; text-align: center; margin-bottom: 1rem; font-size: 0.9rem; }
+        a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
     <div class="login-card">
         <div class="login-header">
             <i class="fas fa-seedling" style="font-size: 3rem; color: #10b981; margin-bottom: 1rem;"></i>
-            <h2>เข้าสู่ระบบผู้ดูแลระบบ</h2>
+            <h2>เข้าสู่ระบบ</h2>
         </div>
         
         {% if error %}
@@ -31,15 +32,19 @@
         <form method="POST">
             <div class="form-group">
                 <label>อีเมล</label>
-                <input type="email" name="email" class="form-control" required placeholder="กรอกอีเมล">
+                <input type="email" name="email" class="form-control" required>
             </div>
             <div class="form-group">
                 <label>รหัสผ่าน</label>
-                <input type="password" name="password" class="form-control" required placeholder="กรอกรหัสผ่าน">
+                <input type="password" name="password" class="form-control" required>
             </div>
             <button type="submit" class="btn-login">เข้าสู่ระบบ</button>
         </form>
-        <div style="text-align: center; margin-top: 1rem;">
+        
+        <div style="text-align: center; margin-top: 1.5rem; border-top: 1px solid #eee; padding-top: 1rem;">
+            <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 0.5rem;">ยังไม่มีบัญชี?</p>
+            <a href="/register" style="color: #10b981; text-decoration: none; font-weight: 600;">สมัครสมาชิกใหม่</a>
+            <br><br>
             <a href="/" style="color: #6b7280; text-decoration: none; font-size: 0.9rem;">กลับหน้าหลัก</a>
         </div>
     </div>
