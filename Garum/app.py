@@ -3,24 +3,42 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 import os
 import random
 import datetime
+import time
+# --- ส่วนที่เพิ่มเข้ามาสำหรับ AI ---
+import cv2
+import numpy as np
+from ultralytics import YOLO
+# -----------------------------
 
 app = Flask(__name__)
 app.secret_key = 'cabbage_secret_key'
 
-# --- แก้ไข 1: ตั้งค่า Path ให้ถูกต้องสำหรับ PythonAnywhere ---
-# หาที่อยู่ของไฟล์ app.py ปัจจุบัน
+# --- ตั้งค่า Path ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# กำหนดที่อยู่ Database แบบระบุเต็ม
 DB_PATH = os.path.join(BASE_DIR, 'cabbage.db')
-# กำหนดที่อยู่โฟลเดอร์รูปภาพ
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static/uploads')
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+# --- โหลดโมเดล AI เตรียมไว้ ---
+print("⏳ กำลังโหลดโมเดล AI...")
+try:
+    # ตรวจสอบว่ามีไฟล์ best.pt อยู่ไหม
+    MODEL_PATH = os.path.join(BASE_DIR, 'best.pt')
+    if os.path.exists(MODEL_PATH):
+        model = YOLO(MODEL_PATH)
+        print("✅ โหลดโมเดลสำเร็จ!")
+    else:
+        print("⚠️ หาไฟล์ best.pt ไม่เจอ! (ระบบจะกลับไปใช้การสุ่มชั่วคราว)")
+        model = None
+except Exception as e:
+    print(f"❌ Error โหลดโมเดลไม่ได้: {e}")
+    model = None
+# ---------------------------
+
 def get_db_connection():
-    # ใช้ DB_PATH ที่ระบุที่อยู่เต็มแล้ว
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
@@ -44,7 +62,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# เรียกใช้เพื่อสร้าง DB (ถ้ายังไม่มี)
+# เรียกใช้เพื่อสร้าง DB
 init_db()
 
 # --- Routes ---
@@ -116,12 +134,10 @@ def admin_dashboard():
     conn = get_db_connection()
     users = conn.execute('SELECT * FROM users').fetchall()
     
-    # ดึงข้อมูลมาแสดงผล (Stats)
     today = datetime.date.today()
     start_month = today.replace(day=1)
     start_year = today.replace(month=1, day=1)
 
-    # ใช้ try-except ป้องกัน error หากตารางยังไม่สมบูรณ์
     try:
         count_today = conn.execute("SELECT COUNT(*) FROM upload_logs WHERE date_upload = ?", (today,)).fetchone()[0]
         count_month = conn.execute("SELECT COUNT(*) FROM upload_logs WHERE date_upload >= ?", (start_month,)).fetchone()[0]
@@ -187,6 +203,9 @@ def save_settings():
     conn.close()
     return redirect(url_for('admin_dashboard'))
 
+# ======================================================
+# ส่วนวิเคราะห์ด้วย AI (แทนที่ Random เดิม)
+# ======================================================
 @app.route('/analyze', methods=['POST'])
 def analyze():
     if 'file' not in request.files: return jsonify({'error': 'No file'}), 400
@@ -198,34 +217,99 @@ def analyze():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
 
-        # AI Simulation
-        time.sleep(1)
-        statuses = ['ready', 'not-ready', 'overdue']
-        result_status = random.choice(statuses)
-        weeks = 0
-        
-        if result_status == 'ready':
-            weeks = random.randint(6, 8)
-            response_data = {'status': 'ready', 'label': 'พร้อมเก็บเกี่ยว', 'description': 'AI ตรวจพบหัวกะหล่ำแน่น ขนาดเหมาะสม', 'weeks': weeks, 'icon': 'fas fa-check-circle'}
-        elif result_status == 'overdue':
-            weeks = random.randint(9, 10)
-            response_data = {'status': 'overdue', 'label': 'เกินเวลาแล้ว', 'description': 'กะหล่ำปลีเริ่มแก่เกินไป ใบเริ่มเหลือง', 'weeks': weeks, 'icon': 'fas fa-exclamation-triangle'}
-        else:
-            weeks = random.randint(2, 5)
-            response_data = {'status': 'not-ready', 'label': 'ยังไม่พร้อม', 'description': 'หัวยังไม่แน่นพอ ควรรออีกสักพัก', 'weeks': weeks, 'icon': 'fas fa-clock'}
-            
-        # ส่ง Path กลับไปให้ Frontend (ต้องเป็น Path สัมพัทธ์สำหรับ Web)
-        response_data['image_url'] = f"/static/uploads/{filename}"
+        # ค่าเริ่มต้น (กรณี AI มีปัญหา หรือไม่เจออะไร)
+        final_status = 'not-ready'
+        final_label = 'ตรวจไม่พบ'
+        final_desc = 'ไม่พบหัวกะหล่ำปลีในภาพ'
+        avg_weeks = 0
+        final_icon = 'fas fa-question-circle'
 
+        # --- เริ่มใช้ AI ---
+        if model:
+            try:
+                # 1. อ่านรูปด้วย OpenCV
+                img = cv2.imread(filepath)
+                
+                # 2. ให้ AI ทำนาย (conf=0.4 คือต้องมั่นใจ 40% ขึ้นไป)
+                results = model(img, conf=0.4)
+
+                detected_weeks = []
+                count_ready = 0
+                count_not_ready = 0
+
+                # 3. วาดกรอบและนับจำนวน
+                for result in results:
+                    for box in result.boxes:
+                        cls_id = int(box.cls[0]) 
+                        # x1, y1, x2, y2 = map(int, box.xyxy[0]) # ถ้าอยากวาดกรอบให้เปิดบรรทัดนี้
+
+                        # แปลง Class ID เป็น Week (0->1, ... 7->8)
+                        week_num = cls_id + 1
+                        detected_weeks.append(week_num)
+
+                        if week_num >= 8: # Week 8 = Ready
+                            count_ready += 1
+                            # cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2) # สีเขียว
+                        else:
+                            count_not_ready += 1
+                            # cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255), 2) # สีแดง
+
+                # 4. บันทึกรูปที่วาดกรอบแล้วทับไฟล์เดิม (ถ้าเปิดวาดกรอบ)
+                # cv2.imwrite(filepath, img)
+
+                # 5. สรุปผล
+                if detected_weeks:
+                    avg_weeks = round(sum(detected_weeks) / len(detected_weeks))
+                    
+                    if count_ready > count_not_ready:
+                        final_status = 'ready'
+                        final_label = 'พร้อมเก็บเกี่ยว'
+                        final_desc = f'พบกะหล่ำพร้อมเก็บ {count_ready} หัว (เฉลี่ย Week {avg_weeks})'
+                        final_icon = 'fas fa-check-circle'
+                    else:
+                        final_status = 'not-ready'
+                        final_label = 'ยังไม่พร้อม'
+                        final_desc = f'ส่วนใหญ่ยังโตไม่เต็มที่ (เฉลี่ย Week {avg_weeks})'
+                        final_icon = 'fas fa-clock'
+                        
+            except Exception as e:
+                print(f"AI Error: {e}")
+                final_desc = "เกิดข้อผิดพลาดในการวิเคราะห์ภาพ"
+
+        else:
+            # กรณีไม่มีโมเดล ให้ใช้ Random แก้ขัดไปก่อน (เหมือนโค้ดเดิม)
+            statuses = ['ready', 'not-ready', 'overdue']
+            final_status = random.choice(statuses)
+            if final_status == 'ready':
+                avg_weeks = random.randint(7, 8)
+                final_label = 'พร้อมเก็บเกี่ยว (จำลอง)'
+                final_desc = 'AI จำลอง: พบหัวกะหล่ำแน่น'
+                final_icon = 'fas fa-check-circle'
+            else:
+                avg_weeks = random.randint(3, 6)
+                final_label = 'ยังไม่พร้อม (จำลอง)'
+                final_desc = 'AI จำลอง: หัวยังไม่แน่น'
+                final_icon = 'fas fa-clock'
+
+        # บันทึกลง Database
         conn = get_db_connection()
         conn.execute('INSERT INTO upload_logs (date_upload, status, weeks) VALUES (?, ?, ?)', 
-                     (datetime.date.today(), result_status, weeks))
+                     (datetime.date.today(), final_status, avg_weeks))
         conn.commit()
         conn.close()
         
+        # ส่ง JSON กลับไป
+        response_data = {
+            'status': final_status,
+            'label': final_label,
+            'description': final_desc,
+            'weeks': avg_weeks,
+            'icon': final_icon,
+            'image_url': f"/static/uploads/{filename}?t={int(time.time())}"
+        }
+        
         return jsonify(response_data)
 
-import time
-
 if __name__ == '__main__':
-    app.run(debug=True)
+    # รันบน Render ต้องระบุ host='0.0.0.0'
+    app.run(host='0.0.0.0', port=5000, debug=True)
