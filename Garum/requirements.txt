@@ -4,3 +4,4 @@ opencv-python-headless
 numpy
 Pillow
 gunicorn
+onnxruntime-gpu
