@@ -28,7 +28,7 @@ try:
     # ตรวจสอบว่ามีไฟล์ best.pt อยู่ไหม
     MODEL_PATH = os.path.join(BASE_DIR, 'best.pt')
     if os.path.exists(MODEL_PATH):
-        model = YOLO(MODEL_PATH)
+        model = YOLO('best.onnx', task='detect')
         print("✅ โหลดโมเดลสำเร็จ!")
     else:
         print("⚠️ หาไฟล์ best.pt ไม่เจอ! (ระบบจะกลับไปใช้การสุ่มชั่วคราว)")
