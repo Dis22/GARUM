@@ -5,3 +5,4 @@ numpy
 Pillow
 gunicorn
 onnxruntime
+onnx
