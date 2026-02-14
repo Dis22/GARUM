@@ -22,21 +22,23 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# --- โหลดโมเดล AI เตรียมไว้ ---
+# --- แก้ไขส่วนโหลดโมเดล (เปลี่ยนจาก .pt เป็น .onnx) ---
 print("⏳ กำลังโหลดโมเดล AI...")
 try:
-    # ตรวจสอบว่ามีไฟล์ best.pt อยู่ไหม
-    MODEL_PATH = os.path.join(BASE_DIR, 'best.pt')
+    # เปลี่ยนชื่อไฟล์ตรงนี้เป็น .onnx ครับ
+    MODEL_PATH = os.path.join(BASE_DIR, 'best.onnx') 
+    
     if os.path.exists(MODEL_PATH):
-        model = YOLO('best.onnx', task='detect')
-        print("✅ โหลดโมเดลสำเร็จ!")
+        # เพิ่ม task='detect' เพื่อความชัวร์
+        model = YOLO(MODEL_PATH, task='detect') 
+        print(f"✅ โหลดโมเดล {MODEL_PATH} สำเร็จ!")
     else:
-        print("⚠️ หาไฟล์ best.pt ไม่เจอ! (ระบบจะกลับไปใช้การสุ่มชั่วคราว)")
+        print(f"⚠️ หาไฟล์ {MODEL_PATH} ไม่เจอ! (ระบบจะกลับไปใช้การสุ่มชั่วคราว)")
         model = None
 except Exception as e:
     print(f"❌ Error โหลดโมเดลไม่ได้: {e}")
     model = None
-# ---------------------------
+# ----------------------------------------------------
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
